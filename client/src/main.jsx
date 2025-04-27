@@ -4,7 +4,7 @@ import './index.css'
 import App from './App.jsx'
 import axios from "axios"
 
-axios.defaults.baseURL = "http://localhost:5000" //
+axios.defaults.baseURL = "https://mern-femhack-production-0e5d.up.railway.app" //
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

@@ -5,17 +5,22 @@ import userRoutes from './routes/userRoutes.js';
 import taskRoutes from './routes/taskRoutes.js'; 
 import connetDb from './config/db.js';
 
-
 dotenv.config();
 const app = express();
 
-app.use(cors());
+// CORS configuration for production URL
+const corsOptions = {
+  origin: 'https://mern-femhack-production-0e5d.up.railway.app', // Railway ka production URL yahan daalein
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true, // Agar cookies ya sessions use kar rahe hain
+};
+
+app.use(cors(corsOptions)); // Apply specific CORS options
 app.use(express.json());
 
-//connect DB
-connetDb()
-// port
-const port = process.env.PORT || 5000
+// DB connection
+connetDb();
+
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/tasks', taskRoutes);
@@ -24,8 +29,8 @@ app.get('/', (req, res) => {
   res.send('API is running...');
 });
 
-
-
+// Start the server
+const port = process.env.PORT || 8080;
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
-})
+  console.log(`Server is running on port ${port}`);
+});

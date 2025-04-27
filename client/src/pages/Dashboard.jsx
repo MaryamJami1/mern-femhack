@@ -1,6 +1,5 @@
-
-
 import { useState, useEffect, useContext } from "react"
+import axios from '../api/axios';
 import {
   DndContext,
   closestCenter,
@@ -12,7 +11,6 @@ import {
 } from "@dnd-kit/core"
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { restrictToVerticalAxis, restrictToWindowEdges } from "@dnd-kit/modifiers"
-import axios from "axios"
 import AuthContext from "../context/AuthContext"
 import TaskCard from "../components/TaskCard"
 import SortableTaskCard from "../components/SortableTaskCard"

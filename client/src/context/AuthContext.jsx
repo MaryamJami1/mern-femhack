@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useState, useEffect } from "react"
-import axios from "axios"
+import axios from '../api/axios';
 
 const AuthContext = createContext()
 
@@ -42,8 +42,7 @@ export const AuthProvider = ({ children }) => {
 
         setUser({
           _id: payload.id,
-          // Other user details would typically come from a /me endpoint
-          // but we'll work with what we have
+         
         })
         setLoading(false)
       } catch (err) {

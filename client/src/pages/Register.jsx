@@ -4,6 +4,7 @@ import { useState, useContext, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import AuthContext from "../context/AuthContext"
 
+
 const Register = () => {
   const [formData, setFormData] = useState({
     name: "",
