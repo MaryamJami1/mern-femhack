@@ -10,10 +10,18 @@ const app = express();
 
 // CORS configuration for production URL
 const corsOptions = {
-  origin: 'https://mern-femhack-production-0e5d.up.railway.app', // Railway ka production URL yahan daalein
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  origin: [
+    'https://mern-femhack.vercel.app',  // Vercel ka frontend URL
+    'https://mern-femhack-production-0e5d.up.railway.app', // Railway ka production URL
+    'http://localhost:5173', // Local development frontend
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   credentials: true, // Agar cookies ya sessions use kar rahe hain
 };
+
+
+
+
 
 app.use(cors(corsOptions)); // Apply specific CORS options
 app.use(express.json());
