@@ -1,76 +1,119 @@
 import React, { useState } from 'react';
-import API from '../services/api'; // Assuming API is setup for backend calls
+import API from '../services/api';
 
 const TaskCard = ({ task, onStatusChange, onDelete }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [updatedTitle, setUpdatedTitle] = useState(task.title);
     const [updatedDescription, setUpdatedDescription] = useState(task.description);
     const [updatedAssignedTo, setUpdatedAssignedTo] = useState(task.assignedTo);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     const handleEdit = async () => {
+        setIsLoading(true);
+        setError(null);
+        
         try {
-          const updatedTask = {
-            title: updatedTitle,
-            description: updatedDescription,
-            assignedTo: updatedAssignedTo,
-            status: task.status
-          };
-          
-          const token = localStorage.getItem('token');
-          
-          if (!token) {
-            throw new Error('No token provided');
-          }
-          
-          await API.put(`/tasks/${task._id}`, updatedTask, {
-            headers: {
-              'Authorization': `Bearer ${token}`
+            const updatedTask = {
+                title: updatedTitle,
+                description: updatedDescription,
+                assignedTo: updatedAssignedTo,
+                status: task.status
+            };
+            
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                throw new Error('No token provided');
             }
-          });
-          
-          setIsEditing(false);
-          
-          // Option 1: Call onStatusChange with the same parameters as elsewhere
-          if (typeof onStatusChange === 'function') {
-            onStatusChange(task._id, task.status);
-          }
-          
-          // OR Option 2: Don't call onStatusChange here at all and refresh the page
-          // window.location.reload();
+            
+            const response = await API.put(`/tasks/${task._id}`, updatedTask, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            console.log('Task updated successfully:', response.data);
+            setIsEditing(false);
+            
+            // Check if onStatusChange is a function before calling it
+            if (typeof onStatusChange === 'function') {
+                onStatusChange(task._id, task.status);
+            } else {
+                // If onStatusChange is not available, refresh the page
+                console.log('Task updated successfully, but onStatusChange function not available');
+                window.location.reload();
+            }
         } catch (error) {
-          console.error('Error updating task:', error);
+            console.error('Error updating task:', {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status
+            });
+            setError('Failed to update task. Please try again.');
+        } finally {
+            setIsLoading(false);
         }
     };
-      
-      const handleDelete = async () => {
+    
+    const handleDelete = async () => {
+        setIsLoading(true);
+        setError(null);
+        
         try {
-          const token = localStorage.getItem('token');
-        
-          if (!token) {
-            throw new Error('No token provided');
-          }
-        
-          await API.delete(`/tasks/${task._id}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
+            // Make sure this line is present and working
+            const token = localStorage.getItem('token');
+            
+            // Add a check to ensure token exists
+            if (!token) {
+                setError('Authentication token not found. Please log in again.');
+                console.error('Token not found in localStorage');
+                return; // Exit the function early
             }
-          });
-        
-          // Check if onDelete is a function before calling it
-          if (typeof onDelete === 'function') {
-            onDelete(task._id);
-          } else {
-            // If onDelete is not available, refresh the page or handle it another way
-            console.log('Task deleted successfully, but onDelete function not available');
-            window.location.reload(); // Optional: refresh the page to show updated task list
-          }
+            
+            console.log('Token retrieved successfully:', token.substring(0, 10) + '...');
+            
+            // Now use the token in your API call
+            const response = await API.delete(`/tasks/${task._id}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            console.log('Delete response:', response);
+            
+            if (typeof onDelete === 'function') {
+                onDelete(task._id);
+            } else {
+                window.location.reload();
+            }
         } catch (error) {
-          console.error('Error deleting task:', error);
+            console.error('Delete error details:', error);
+            setError('Failed to delete task. Please try again.');
+        } finally {
+            setIsLoading(false);
         }
-      };
+    };
+    const handleStatusChange = () => {
+        const newStatus = task.status === 'In Progress' ? 'Done' : 'In Progress';
+        
+        // Check if onStatusChange is a function before calling it
+        if (typeof onStatusChange === 'function') {
+            onStatusChange(task._id, newStatus);
+        } else {
+            console.log('Cannot change status: onStatusChange function not available');
+            // You could show an error message to the user here
+        }
+    };
 
     return (
         <div className="bg-white shadow-lg rounded-lg p-4 mb-4 border border-gray-200">
+            {error && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                    {error}
+                </div>
+            )}
+            
             <h4 className="text-xl font-semibold text-gray-800 mb-2">
                 {isEditing ? (
                     <input
@@ -111,8 +154,9 @@ const TaskCard = ({ task, onStatusChange, onDelete }) => {
 
             <div className="mt-4 flex justify-between items-center">
                 <span
-                    className={`text-sm font-semibold px-3 py-1 rounded-full ${task.status === 'In Progress' ? 'bg-yellow-400 text-white' : 'bg-green-500 text-white'
-                        }`}
+                    className={`text-sm font-semibold px-3 py-1 rounded-full ${
+                        task.status === 'In Progress' ? 'bg-yellow-400 text-white' : 'bg-green-500 text-white'
+                    }`}
                 >
                     {task.status}
                 </span>
@@ -120,9 +164,8 @@ const TaskCard = ({ task, onStatusChange, onDelete }) => {
                 <div>
                     <button
                         className="ml-4 text-blue-500 hover:underline"
-                        onClick={() =>
-                            onStatusChange(task._id, task.status === 'In Progress' ? 'Done' : 'In Progress') // Changed task.id to task._id
-                        }
+                        onClick={handleStatusChange}
+                        disabled={isLoading}
                     >
                         Mark as {task.status === 'In Progress' ? 'Done' : 'In Progress'}
                     </button>
@@ -131,13 +174,15 @@ const TaskCard = ({ task, onStatusChange, onDelete }) => {
                         <button
                             className="ml-4 text-green-500 hover:underline"
                             onClick={handleEdit}
+                            disabled={isLoading}
                         >
-                            Save
+                            {isLoading ? 'Saving...' : 'Save'}
                         </button>
                     ) : (
                         <button
                             className="ml-4 text-orange-500 hover:underline"
-                            onClick={() => setIsEditing(true)} // Toggle to editing mode
+                            onClick={() => setIsEditing(true)}
+                            disabled={isLoading}
                         >
                             Edit
                         </button>
@@ -146,13 +191,20 @@ const TaskCard = ({ task, onStatusChange, onDelete }) => {
                     <button
                         className="ml-4 text-red-500 hover:underline"
                         onClick={handleDelete}
+                        disabled={isLoading}
                     >
-                        Delete
+                        {isLoading ? 'Deleting...' : 'Delete'}
                     </button>
                 </div>
             </div>
         </div>
     );
+};
+
+// Add default props to handle cases where functions aren't passed
+TaskCard.defaultProps = {
+    onStatusChange: null,
+    onDelete: null
 };
 
 export default TaskCard;
