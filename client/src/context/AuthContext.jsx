@@ -1,43 +1,123 @@
-// src/context/AuthContext.js
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import axios from 'axios';
+"use client"
 
-const AuthContext = createContext();
+import { createContext, useState, useEffect } from "react"
+import axios from "axios"
 
-export const useAuth = () => useContext(AuthContext);
+const AuthContext = createContext()
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null)
+  const [token, setToken] = useState(localStorage.getItem("token"))
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
+  // Set axios default headers
   useEffect(() => {
-    const token = localStorage.getItem('token');
     if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
-       axios.get('http://localhost:5000/api/users/profile')
-        .then(res => setUser(res.data))
-        .catch(err => console.log(err))
-        .finally(() => setLoading(false));
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`
     } else {
-      setLoading(false);
+      delete axios.defaults.headers.common["Authorization"]
     }
-  }, []);
+  }, [token])
 
-  const login = (userData) => {
-    setUser(userData);
-    localStorage.setItem('token', userData.token);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${userData.token}`;
-  };
+  // Check if user is logged in on page load
+  useEffect(() => {
+    const loadUser = async () => {
+      if (!token) {
+        setLoading(false)
+        return
+      }
 
+      try {
+        // Extract user info from token (since there's no /me endpoint)
+        const tokenParts = token.split(".")
+        if (tokenParts.length !== 3) {
+          throw new Error("Invalid token format")
+        }
+
+        const payload = JSON.parse(atob(tokenParts[1]))
+        if (!payload || !payload.id) {
+          throw new Error("Invalid token payload")
+        }
+
+        setUser({
+          _id: payload.id,
+          // Other user details would typically come from a /me endpoint
+          // but we'll work with what we have
+        })
+        setLoading(false)
+      } catch (err) {
+        console.error("Error loading user:", err)
+        localStorage.removeItem("token")
+        setToken(null)
+        setUser(null)
+        setLoading(false)
+      }
+    }
+
+    loadUser()
+  }, [token])
+
+  // Register user
+  const register = async (userData) => {
+    try {
+      setError(null)
+      const res = await axios.post("/api/users/register", userData)
+      localStorage.setItem("token", res.data.token)
+      setToken(res.data.token)
+      setUser({
+        _id: res.data._id,
+        name: res.data.name,
+        email: res.data.email,
+      })
+      return res.data
+    } catch (err) {
+      setError(err.response?.data?.message || "Registration failed")
+      throw err
+    }
+  }
+
+  // Login user
+  const login = async (userData) => {
+    try {
+      setError(null)
+      const res = await axios.post("/api/users/login", userData)
+      localStorage.setItem("token", res.data.token)
+      setToken(res.data.token)
+      setUser({
+        _id: res.data._id,
+        name: res.data.name,
+        email: res.data.email,
+      })
+      return res.data
+    } catch (err) {
+      setError(err.response?.data?.message || "Login failed")
+      throw err
+    }
+  }
+
+  // Logout user
   const logout = () => {
-    setUser(null);
-    localStorage.removeItem('token');
-    delete axios.defaults.headers.common['Authorization'];
-  };
+    localStorage.removeItem("token")
+    setToken(null)
+    setUser(null)
+  }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
-      {!loading && children}
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        loading,
+        error,
+        register,
+        login,
+        logout,
+      }}
+    >
+      {children}
     </AuthContext.Provider>
-  );
-};
+  )
+}
+
+export default AuthContext

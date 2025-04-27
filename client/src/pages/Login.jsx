@@ -1,80 +1,113 @@
-import { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import API from '../services/api';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { Link } from 'react-router-dom';
 
-function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const { login } = useAuth();
-    const navigate = useNavigate();
+import { useState, useContext, useEffect } from "react"
+import { Link, useNavigate } from "react-router-dom"
+import AuthContext from "../context/AuthContext"
 
-  // Toastify Notification Setup
-  const notifySuccess = (message) => toast.success(message);
-  const notifyError = (message) => toast.error(message);
+const Login = () => {
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  })
+  const [formError, setFormError] = useState("")
+  const { login, user, error } = useContext(AuthContext)
+  const navigate = useNavigate()
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // Basic Validation
-    if (!email || !password) {
-      notifyError('Both fields are required.');
-      return;
+  useEffect(() => {
+    // If user is already logged in, redirect to dashboard
+    if (user) {
+      navigate("/")
     }
+  }, [user, navigate])
 
-    // Email format validation
-    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!emailPattern.test(email)) {
-      notifyError('Please enter a valid email address.');
-      return;
+  useEffect(() => {
+    if (error) {
+      setFormError(error)
+    }
+  }, [error])
+
+  const { email, password } = formData
+
+  const onChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value })
+  }
+
+  const onSubmit = async (e) => {
+    e.preventDefault()
+    setFormError("")
+
+    if (!email || !password) {
+      setFormError("Please enter all fields")
+      return
     }
 
     try {
-      const { data } = await API.post('/users/login', { email, password });
-      login(data);
-      notifySuccess('Login successful! Redirecting to dashboard...');
-      navigate('/dashboard');
-    } catch (error) {
-      console.error(error.response.data.message);
-      notifyError(error.response.data.message || 'Something went wrong!');
+      await login({ email, password })
+    } catch (err) {
+      console.error("Login error:", err)
     }
-  };
+  }
 
   return (
-    <div className="max-w-sm mx-auto p-6 mt-4 bg-white rounded-lg shadow-lg">
-      <h2 className="text-2xl font-semibold text-center mb-4">Login</h2>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="w-full p-3 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          className="w-full p-3 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-        <button
-          type="submit"
-          className="w-full py-3 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none"
-        >
-          Login
-        </button>
+    <div className="max-w-md mx-auto mt-10 bg-white p-8 rounded-lg shadow-md">
+      <h1 className="text-2xl font-bold text-center mb-6">Login to TrackIt</h1>
+
+      {formError && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{formError}</div>
+      )}
+
+      <form onSubmit={onSubmit}>
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
+            Email
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            value={email}
+            onChange={onChange}
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            placeholder="Email"
+            required
+          />
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
+            Password
+          </label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            value={password}
+            onChange={onChange}
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            placeholder="Password"
+            required
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <button
+            type="submit"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
+          >
+            Login
+          </button>
+        </div>
+
+        <div className="text-center mt-4">
+          <p className="text-gray-600">
+            Don't have an account?{" "}
+            <Link to="/register" className="text-blue-600 hover:text-blue-800">
+              Register
+            </Link>
+          </p>
+        </div>
       </form>
-      <div className="mt-4 text-center">
-        <p>Don't have an account? <Link to="/" className="text-blue-500 hover:underline">Register here</Link></p>
-      </div>
     </div>
-  );
+  )
 }
 
-export default LoginPage;
+export default Login
